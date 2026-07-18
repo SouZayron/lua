@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lua — Perfil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   TOKENS — troque aqui as cores e a foto para reaproveitar
+   Tema padrão: ESCURO (o claro fica disponível no botão do topo)
+   ============================================================ */
+:root{
+  --bg:#242024;
+  --bg-alt:#2C262A;
+  --primary:#D98BA0;
+  --secondary:#E8AFBE;
+  --glow:#F4CBD6;
+  --text:#F5EFF1;
+  --text-2:#AFA3A8;
+  --card:rgba(45,39,42,.5);
+  --card-solid:rgba(45,39,42,.75);
+  --card-border:rgba(217,139,160,.24);
+  --shadow:0 20px 60px rgba(217,139,160,.28);
+  --radius:34px;
+  --blur:20px;
+  --online:#2ECC71;
+  --away:#F5C242;
+  --offline:#E15554;
+}
+body.light{
+  --bg:#F7F4F5;
+  --bg-alt:#EFE9EB;
+  --text:#222222;
+  --text-2:#707070;
+  --card:rgba(255,255,255,.45);
+  --card-solid:rgba(255,255,255,.7);
+  --card-border:rgba(255,255,255,.6);
+  --shadow:0 20px 60px rgba(217,139,160,.18);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  font-family:'Inter',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  overflow:hidden; /* site em blocos — sem rolagem da página */
+  position:relative;
+  transition:background .5s ease,color .5s ease;
+}
+
+/* ============================================================
+   FUNDO — grid discreto + partículas + glow do mouse
+   ============================================================ */
+.bg-grid{
+  position:fixed;inset:0;z-index:0;
+  background-image:
+    linear-gradient(var(--card-border) 1px,transparent 1px),
+    linear-gradient(90deg,var(--card-border) 1px,transparent 1px);
+  background-size:52px 52px;
+  opacity:.35;
+  mask-image:radial-gradient(circle at 50% 40%,black 10%,transparent 75%);
+}
+#particles{position:fixed;inset:0;z-index:0;pointer-events:none;}
+.cursor-glow{
+  position:fixed;width:520px;height:520px;border-radius:50%;
+  background:radial-gradient(circle,var(--glow) 0%,transparent 70%);
+  opacity:.22;pointer-events:none;z-index:0;
+  transform:translate(-50%,-50%);
+  transition:opacity .3s ease;
+  filter:blur(10px);
+}
+.blob{
+  position:fixed;border-radius:50%;filter:blur(60px);z-index:0;pointer-events:none;
+  opacity:.35;animation:float 10s ease-in-out infinite;
+}
+.blob-1{width:280px;height:280px;background:var(--primary);top:-80px;left:-80px;}
+.blob-2{width:220px;height:220px;background:var(--secondary);bottom:-60px;right:-60px;animation-delay:2s;}
+@keyframes float{
+  0%,100%{transform:translateY(0) translateX(0);}
+  50%{transform:translateY(-25px) translateX(15px);}
+}
+
+/* ---------- Estrelas cadentes ---------- */
+.star-field{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+.shooting-star{
+  position:absolute;
+  width:110px;height:2px;
+  background:linear-gradient(90deg, transparent, var(--glow) 60%, #fff);
+  border-radius:2px;
+  opacity:0;
+  transform:rotate(45deg);
+  transform-origin:left center;
+  filter:drop-shadow(0 0 4px var(--glow));
+  animation-name:shootFall;
+  animation-timing-function:ease-in;
+  animation-iteration-count:infinite;
+}
+@keyframes shootFall{
+  0%{ transform:translate(0,0) rotate(45deg); opacity:0; }
+  8%{ transform:translate(30px,30px) rotate(45deg); opacity:1; }
+  32%{ transform:translate(260px,260px) rotate(45deg); opacity:1; }
+  40%{ transform:translate(340px,340px) rotate(45deg); opacity:0; }
+  100%{ transform:translate(340px,340px) rotate(45deg); opacity:0; }
+}
+
+.twinkle-star{
+  position:absolute;
+  width:3px;height:3px;border-radius:50%;
+  background:var(--glow);
+  box-shadow:0 0 6px var(--glow);
+  animation-name:twinkle;
+  animation-timing-function:ease-in-out;
+  animation-iteration-count:infinite;
+}
+@keyframes twinkle{
+  0%,100%{ opacity:.15; transform:scale(.8); }
+  50%{ opacity:1; transform:scale(1.3); }
+}
+
+/* ============================================================
+   NAV FIXA
+   ============================================================ */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:50;
+  display:flex;align-items:center;justify-content:flex-end;
+  padding:16px 42px;
+  background:transparent;
+  border-bottom:none;
+}
+.logo{
+  font-family:'Poppins',sans-serif;font-weight:800;font-size:20px;letter-spacing:.5px;
+  background:linear-gradient(90deg,var(--primary),var(--secondary));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.theme-toggle{
+  width:44px;height:44px;border-radius:50%;border:1px solid var(--card-border);
+  background:var(--card-solid);color:var(--text);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+  transition:transform .3s ease;
+}
+.theme-toggle:hover{transform:rotate(20deg) scale(1.05);}
+
+/* ============================================================
+   ESTRUTURA DE PAINÉIS — cada bloco ocupa a tela, sem scroll
+   ============================================================ */
+.stage{position:relative;z-index:5;height:100vh;padding-top:20px;}
+.panel{
+  position:absolute;inset:0;top:20px;
+  display:none;
+  padding:26px 6vw 22px;
+  opacity:0;transform:translateY(18px);
+  transition:opacity .45s ease, transform .45s ease;
+}
+.panel.active{display:flex;opacity:1;transform:translateY(0);}
+.panel-inner{width:100%;margin:auto;}
+
+/* ---------- CONSTELAÇÃO (Home) ---------- */
+.constellation{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;height:100%;max-width:820px;margin:auto;text-align:center;
+}
+.status-chip-top{
+  display:flex;align-items:center;gap:7px;
+  background:var(--card);backdrop-filter:blur(var(--blur));
+  padding:7px 14px;border-radius:20px;border:1px solid var(--card-border);
+  font-size:12.5px;font-weight:600;
+}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--online);box-shadow:0 0 8px var(--online);}
+
+/* ---------- CABEÇALHO: foto à esquerda, status/nome/role à direita ---------- */
+.profile-header{
+  display:flex;align-items:center;justify-content:center;gap:26px;
+  text-align:left;
+}
+.profile-header-text{
+  display:flex;flex-direction:column;align-items:flex-start;gap:8px;
+}
+.profile-header-text .name-xl,
+.profile-header-text .status-chip-top{
+  justify-content:flex-start;
+}
+.profile-header-text .status-chip-top{
+  padding:8.4px 16.8px;font-size:15px;gap:8.4px;
+}
+.profile-header-text .status-chip-top .dot{
+  width:9.6px;height:9.6px;
+}
+.profile-header-text .name-xl{
+  font-size:clamp(36px,5.52vw,69.6px);
+}
+.profile-header-text .role{
+  font-size:15.6px;
+}
+
+.name-xl{
+  position:relative;
+  display:inline-flex;flex-wrap:wrap;justify-content:center;
+  font-family:'Poppins',sans-serif;font-weight:800;font-size:clamp(30px,4.6vw,58px);
+  line-height:1.02;letter-spacing:-1px;
+  background:linear-gradient(100deg,
+    var(--text) 30%, var(--primary) 45%, var(--glow) 50%, var(--primary) 55%, var(--text) 70%);
+  background-size:280% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:nameShine 4.5s linear infinite;
+  filter:drop-shadow(0 0 18px rgba(217,139,160,.4));
+}
+@keyframes nameShine{
+  0%{ background-position:180% 0; }
+  100%{ background-position:-100% 0; }
+}
+.name-xl .letter{
+  display:inline-block;
+  white-space:pre;
+}
+.role{
+  font-size:13px;font-weight:600;color:var(--secondary);letter-spacing:.5px;
+  text-transform:uppercase;
+}
+.bio{font-size:13.5px;line-height:1.55;color:var(--text-2);max-width:520px;margin-top:4px;}
+
+/* ---------- AVATAR CENTRAL ---------- */
+.avatar-wrap{
+  position:relative;width:min(180px,31.2vw);height:min(180px,31.2vw);
+  margin:0;flex:none;
+}
+.photo-glow{
+  position:absolute;inset:-26px;border-radius:50%;
+  background:radial-gradient(circle,var(--glow) 0%,transparent 70%);
+  opacity:.6;filter:blur(20px);z-index:0;animation:pulse 4s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:.4;}50%{opacity:.75;}}
+.orbit-avatar-main{
+  position:relative;z-index:1;width:100%;height:100%;border-radius:50%;overflow:hidden;
+  border:3px solid var(--card-border);box-shadow:var(--shadow);
+  animation:photoFloat 5s ease-in-out infinite;
+}
+@keyframes photoFloat{
+  0%,100%{ transform:translateY(0); }
+  50%{ transform:translateY(-10px); }
+}
+.orbit-avatar-main img{width:100%;height:100%;object-fit:cover;display:block;}
+
+/* ---------- MINI BLOCOS DE AMIGOS ---------- */
+.friends-title{
+  font-family:'Poppins',sans-serif;font-weight:700;font-size:15px;
+  color:var(--secondary);letter-spacing:.3px;
+  margin-top:14px;
+}
+.mini-friends{
+  display:flex;flex-wrap:wrap;justify-content:center;gap:11px;
+  margin-top:8px;max-width:640px;
+}
+.mini-friend{
+  display:flex;align-items:center;gap:8.8px;
+  background:var(--card);backdrop-filter:blur(var(--blur));
+  border:1px solid var(--card-border);border-radius:17.6px;
+  padding:8.8px 15.4px 8.8px 8.8px;
+  transition:transform .25s ease, box-shadow .25s ease;
+  cursor:pointer;
+}
+.mini-friend:hover{transform:translateY(-4px);box-shadow:var(--shadow);}
+.mini-friend-avatar{
+  position:relative;width:37.4px;height:37.4px;flex:none;
+}
+.mini-friend-avatar-inner{
+  width:100%;height:100%;border-radius:50%;overflow:hidden;
+  background:linear-gradient(160deg,var(--primary),var(--secondary));
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-family:'Poppins',sans-serif;font-weight:700;font-size:14.3px;
+}
+.mini-friend-avatar-inner img{width:100%;height:100%;object-fit:cover;}
+.mini-friend-avatar .dot{
+  position:absolute;top:-1px;right:-1px;border:2px solid var(--bg);
+  width:9.9px;height:9.9px;
+}
+.mini-friend-avatar .heart-badge{
+  position:absolute;bottom:-3px;right:-3px;
+  width:15px;height:15px;border-radius:50%;
+  background:var(--bg);border:2px solid var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  font-size:9px;line-height:1;color:var(--primary);
+}
+.mini-friend-info{display:flex;flex-direction:column;text-align:left;line-height:1.25;}
+.mini-friend-info b{font-size:13.75px;font-weight:600;}
+.mini-friend-info span{font-size:11px;color:var(--text-2);}
+
+/* ---------- PLAYER DE MÚSICA ---------- */
+.music-player{
+  display:flex;align-items:center;gap:10px;
+  margin-top:12px;padding:6px 12px 6px 6px;
+  background:var(--card);backdrop-filter:blur(var(--blur));
+  border:1px solid var(--card-border);border-radius:30px;
+  max-width:fit-content;
+}
+.mp-play-btn{
+  width:26px;height:26px;border-radius:50%;flex:none;
+  background:linear-gradient(160deg,var(--primary),var(--secondary));
+  border:none;color:#fff;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .2s ease;
+}
+.mp-play-btn:hover{transform:scale(1.08);}
+.mp-screen{
+  width:118px;height:20px;overflow:hidden;position:relative;
+  background:rgba(0,0,0,.28);border-radius:6px;
+  border:1px solid var(--card-border);
+  display:flex;align-items:center;
+}
+body.light .mp-screen{background:rgba(0,0,0,.08);}
+.mp-marquee{
+  display:flex;gap:40px;white-space:nowrap;
+  animation:mpScroll 9s linear infinite;
+  padding-left:100%;
+}
+.mp-marquee span{
+  font-size:10.5px;font-weight:600;letter-spacing:.3px;
+  color:var(--primary);
+}
+@keyframes mpScroll{
+  0%{ transform:translateX(0); }
+  100%{ transform:translateX(-50%); }
+}
+.mp-volume{display:flex;align-items:center;gap:6px;color:var(--text-2);}
+.mp-volume input[type="range"]{
+  width:64px;height:3px;-webkit-appearance:none;appearance:none;
+  background:var(--card-border);border-radius:2px;outline:none;cursor:pointer;
+}
+.mp-volume input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:11px;height:11px;border-radius:50%;
+  background:var(--primary);cursor:pointer;
+}
+.mp-volume input[type="range"]::-moz-range-thumb{
+  width:11px;height:11px;border-radius:50%;
+  background:var(--primary);border:none;cursor:pointer;
+}
+
+footer.mini{
+  position:fixed;bottom:14px;right:26px;z-index:40;
+  font-size:11.5px;color:var(--text-2);
+}
+
+/* ============================================================
+   PAINEL ADMIN
+   ============================================================ */
+.admin-overlay{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(6,4,14,.68);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+.admin-overlay.active{display:flex;}
+.admin-panel{
+  width:100%;max-width:460px;max-height:82vh;overflow-y:auto;
+  background:var(--card-solid);backdrop-filter:blur(var(--blur));
+  border:1px solid var(--card-border);border-radius:26px;
+  padding:22px;box-shadow:var(--shadow);
+}
+.admin-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.admin-header h3{font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;}
+.admin-close{
+  width:32px;height:32px;border-radius:50%;border:1px solid var(--card-border);
+  background:transparent;color:var(--text);font-size:18px;cursor:pointer;
+}
+.admin-list{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;max-height:220px;overflow-y:auto;}
+.admin-empty{font-size:13px;color:var(--text-2);}
+.admin-row{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--card);border:1px solid var(--card-border);border-radius:14px;
+  padding:9px 12px;
+}
+.admin-row-info{display:flex;flex-direction:column;font-size:12.5px;}
+.admin-row-info b{font-size:13.5px;}
+.admin-row-info span{color:var(--text-2);font-size:11px;}
+.admin-remove{
+  background:rgba(225,85,84,.15);border:1px solid rgba(225,85,84,.4);
+  color:#E15554;padding:6px 12px;border-radius:10px;font-size:12px;cursor:pointer;
+  flex:none;
+}
+.admin-form{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--card-border);padding-top:16px;}
+.admin-form-title{font-size:13px;color:var(--text-2);font-weight:600;margin-bottom:2px;}
+.admin-form input,.admin-form select{
+  width:100%;padding:10px 14px;border-radius:12px;
+  border:1px solid var(--card-border);background:var(--card);color:var(--text);
+  font-family:'Inter',sans-serif;font-size:13.5px;outline:none;
+}
+.admin-form input::placeholder{color:var(--text-2);}
+.admin-add-btn{
+  padding:11px;border-radius:12px;border:none;cursor:pointer;
+  background:linear-gradient(90deg,var(--primary),var(--secondary));
+  color:#fff;font-weight:700;font-size:14px;
+}
+
+/* ============================================================
+   RESPONSIVO
+   ============================================================ */
+@media (max-width:980px){
+  body{overflow-y:auto;}
+  .stage{height:auto;}
+  .panel{position:relative;top:0;padding:20px 6vw 90px;}
+  .panel.active{display:flex;}
+  .constellation{max-width:100%;}
+  .mini-friends{max-width:100%;}
+  .bio{max-width:100%;}
+  nav{padding:14px 20px;}
+  footer.mini{display:none;}
+  .profile-header{flex-direction:column;text-align:center;gap:12px;}
+  .profile-header-text{align-items:center;}
+  .profile-header-text .name-xl,
+  .profile-header-text .status-chip-top{justify-content:center;}
+}
+</style>
+</head>
+<body class="dark">
+
+<div class="bg-grid"></div>
+<div class="star-field" id="starField"></div>
+<canvas id="particles"></canvas>
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="cursor-glow" id="cursorGlow"></div>
+
+<!-- NAV -->
+<nav>
+  <button class="theme-toggle" id="themeToggle" title="Alternar tema">☀️</button>
+</nav>
+
+<div class="stage">
+
+  <!-- HOME / CONSTELAÇÃO -->
+  <section class="panel active" id="home">
+    <div class="panel-inner constellation">
+
+      <div class="profile-header">
+        <div class="avatar-wrap">
+          <div class="photo-glow"></div>
+          <div class="orbit-avatar-main">
+            <img src="https://xatimg.com/image/wDQLJnZfD7Vs.png" alt="Foto de Lua">
+          </div>
+        </div>
+        <div class="profile-header-text">
+          <div class="status-chip-top"><span class="dot"></span> Online agora</div>
+          <h1 class="name-xl" id="typedName">LUA</h1>
+          <div class="role">I ❤ LUXEMBURGO</div>
+        </div>
+      </div>
+
+      <p class="bio">A vida me ensinou que leveza não é ausência de desafios, mas a forma como escolhemos enfrentá-los. Gosto de pessoas verdadeiras, de conversas que aquecem a alma e de momentos simples que fazem o coração sorrir. Acredito que ser fiel a quem somos é a maior liberdade que existe, e sigo cultivando paz, gratidão e boas energias, aproveitando cada novo dia com serenidade, curiosidade e a certeza de que sempre há algo bonito para viver.</p>
+
+      <h2 class="friends-title">Amigos ❤</h2>
+      <div class="mini-friends" id="miniFriends"></div>
+
+      <div class="music-player" id="musicPlayer">
+        <button class="mp-play-btn" id="mpPlayBtn" title="Play/Pause" aria-label="Play/Pause">
+          <svg id="mpIconPlay" viewBox="0 0 24 24" width="14" height="14"><polygon points="5,3 20,12 5,21" fill="currentColor"/></svg>
+          <svg id="mpIconPause" viewBox="0 0 24 24" width="14" height="14" style="display:none;"><rect x="5" y="3" width="5" height="18" fill="currentColor"/><rect x="14" y="3" width="5" height="18" fill="currentColor"/></svg>
+        </button>
+        <div class="mp-screen">
+          <div class="mp-marquee">
+            <span>Scorpions — Wind Of Change</span>
+            <span>Scorpions — Wind Of Change</span>
+          </div>
+        </div>
+        <div class="mp-volume">
+          <svg viewBox="0 0 24 24" width="13" height="13"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4.03v8.06A4.5 4.5 0 0 0 16.5 12z"/></svg>
+          <input type="range" id="mpVolume" min="0" max="100" value="70">
+        </div>
+        <audio id="mpAudio" src="Scorpions - Wind Of Change (Official Music Video).mp3" loop preload="auto"></audio>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer class="mini">© 2026 · Lua · Feito por <a href="https://xat.com/altavibe" target="_blank" style="color:var(--primary);text-decoration:none;">Enigm4tico</a> <button id="adminGearBtn" title="Painel de amigos" style="background:none;border:none;color:var(--text-2);cursor:pointer;font-size:12px;margin-left:6px;opacity:.55;vertical-align:middle;">⚙</button></footer>
+
+<!-- PAINEL ADMIN — acesse com #admin na URL ou pela engrenagem no rodapé -->
+<div class="admin-overlay" id="adminOverlay">
+  <div class="admin-panel">
+    <div class="admin-header">
+      <h3>Painel de Amigos</h3>
+      <button type="button" id="adminClose" class="admin-close">×</button>
+    </div>
+
+    <div class="admin-list" id="adminList"></div>
+
+    <form class="admin-form" id="adminForm">
+      <p class="admin-form-title">Adicionar amigo</p>
+      <input type="text" id="fName" placeholder="Nome" required>
+      <input type="url" id="fPhoto" placeholder="Link da foto (deixe vazio para usar uma letra)">
+      <input type="text" id="fLetter" placeholder="Letra do avatar (se não tiver foto)" maxlength="2">
+      <input type="text" id="fId" placeholder="ID">
+      <select id="fStatus">
+        <option value="online">Online</option>
+        <option value="away">Ausente</option>
+        <option value="offline">Offline</option>
+      </select>
+      <button type="submit" class="admin-add-btn">Adicionar</button>
+    </form>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   DADOS — edite aqui os amigos (nome, foto opcional e status)
+   status: "online" | "away" | "offline"
+   ============================================================ */
+const DEFAULT_FRIENDS = [
+  {name:"Miguel", letter:"M", status:"online", id:"", photo:"https://xatimg.com/image/VMhnaRRC7MFV.png", heart:true},
+  {name:"Freira",   letter:"F", status:"online", id:"", photo:"https://xatimg.com/image/hWRqMSIbynuA.jpg"},
+  {name:"Fake",     letter:"F", status:"online", id:"", photo:"https://xatimg.com/image/ObNaabDlySiQ.png"},
+  {name:"Fiona",    letter:"F", status:"online", id:"", photo:"https://xatimg.com/image/mPcQduiXvx8m.png"},
+  {name:"Zaru",     letter:"Z", status:"online", id:"", photo:"https://xatimg.com/image/M9dhhMXsgh9X.png"},
+];
+
+/* ============================================================
+   PERSISTÊNCIA — os amigos ficam salvos no navegador (localStorage)
+   depois de qualquer alteração feita pelo painel /admin
+   ============================================================ */
+const FRIENDS_STORAGE_KEY = 'lua_friends_v1';
+function loadFriends(){
+  try{
+    const raw = localStorage.getItem(FRIENDS_STORAGE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return DEFAULT_FRIENDS.slice();
+}
+function saveFriends(){
+  try{ localStorage.setItem(FRIENDS_STORAGE_KEY, JSON.stringify(friends)); }catch(e){}
+}
+let friends = loadFriends();
+
+/* ============================================================
+   RENDER: amigos em mini blocos abaixo da bio
+   ============================================================ */
+const miniFriendsEl = document.getElementById('miniFriends');
+
+function renderFriends(){
+  miniFriendsEl.innerHTML = '';
+  friends.forEach(f=>{
+    const item = document.createElement('div');
+    item.className = 'mini-friend';
+    const avatarContent = f.photo
+      ? `<img src="${f.photo}" alt="${f.name}">`
+      : (f.letter || f.name[0]);
+    const heartBadge = f.heart ? `<span class="heart-badge">❤</span>` : '';
+    item.innerHTML = `
+      <div class="mini-friend-avatar">
+        <div class="mini-friend-avatar-inner">${avatarContent}</div>
+        <span class="dot" style="background:var(--${f.status});box-shadow:0 0 6px var(--${f.status})"></span>
+        ${heartBadge}
+      </div>
+      <div class="mini-friend-info">
+        <b>${f.name}</b>
+        <span>${f.id || ''}</span>
+      </div>`;
+    miniFriendsEl.appendChild(item);
+  });
+}
+renderFriends();
+
+/* ============================================================
+   PAINEL ADMIN — acesse abrindo o site com #admin no final da URL
+   (ex: lua.html#admin) ou clicando na engrenagem discreta no rodapé
+   ============================================================ */
+const adminOverlay = document.getElementById('adminOverlay');
+const adminList = document.getElementById('adminList');
+const adminForm = document.getElementById('adminForm');
+
+function renderAdminList(){
+  adminList.innerHTML = '';
+  if(friends.length === 0){
+    adminList.innerHTML = '<p class="admin-empty">Nenhum amigo cadastrado ainda.</p>';
+    return;
+  }
+  friends.forEach((f,i)=>{
+    const row = document.createElement('div');
+    row.className = 'admin-row';
+    row.innerHTML = `
+      <div class="admin-row-info">
+        <b>${f.name}</b>
+        <span>ID: ${f.id || '—'}</span>
+      </div>
+      <button type="button" class="admin-remove" data-i="${i}">Remover</button>`;
+    adminList.appendChild(row);
+  });
+}
+
+adminList.addEventListener('click', e=>{
+  const btn = e.target.closest('.admin-remove');
+  if(!btn) return;
+  const i = +btn.dataset.i;
+  friends.splice(i,1);
+  saveFriends();
+  renderFriends();
+  renderAdminList();
+});
+
+adminForm.addEventListener('submit', e=>{
+  e.preventDefault();
+  const name = document.getElementById('fName').value.trim();
+  const photo = document.getElementById('fPhoto').value.trim();
+  const letter = document.getElementById('fLetter').value.trim();
+  const id = document.getElementById('fId').value.trim();
+  const status = document.getElementById('fStatus').value;
+  if(!name) return;
+  friends.push({
+    name,
+    id,
+    status,
+    ...(photo ? {photo} : {letter: letter || name[0]})
+  });
+  saveFriends();
+  renderFriends();
+  renderAdminList();
+  adminForm.reset();
+});
+
+function openAdmin(){
+  adminOverlay.classList.add('active');
+  renderAdminList();
+}
+function closeAdmin(){
+  adminOverlay.classList.remove('active');
+  if(location.hash === '#admin'){
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+}
+document.getElementById('adminClose').addEventListener('click', closeAdmin);
+adminOverlay.addEventListener('click', e=>{ if(e.target === adminOverlay) closeAdmin(); });
+document.getElementById('adminGearBtn').addEventListener('click', openAdmin);
+
+if(location.hash === '#admin') openAdmin();
+window.addEventListener('hashchange', ()=>{ if(location.hash === '#admin') openAdmin(); });
+
+
+/* ============================================================
+   ESTRELAS CADENTES (poucas, caindo na diagonal)
+   ============================================================ */
+const starField = document.getElementById('starField');
+const STAR_COUNT = 2;
+for(let i=0;i<STAR_COUNT;i++){
+  const star = document.createElement('div');
+  star.className = 'shooting-star';
+  star.style.top = (Math.random()*50) + '%';
+  star.style.left = (Math.random()*70) + '%';
+  star.style.animationDuration = (5 + Math.random()*4) + 's';
+  star.style.animationDelay = (Math.random()*10) + 's';
+  starField.appendChild(star);
+}
+
+/* ============================================================
+   ESTRELAS PISCANDO (twinkle, espalhadas pelo fundo)
+   ============================================================ */
+const TWINKLE_COUNT = 18;
+for(let i=0;i<TWINKLE_COUNT;i++){
+  const tw = document.createElement('div');
+  tw.className = 'twinkle-star';
+  tw.style.top = (Math.random()*100) + '%';
+  tw.style.left = (Math.random()*100) + '%';
+  tw.style.animationDuration = (2 + Math.random()*3) + 's';
+  tw.style.animationDelay = (Math.random()*4) + 's';
+  starField.appendChild(tw);
+}
+
+/* ============================================================
+   GLOW SEGUINDO O MOUSE
+   ============================================================ */
+const glow = document.getElementById('cursorGlow');
+document.addEventListener('mousemove', e=>{
+  glow.style.left = e.clientX + 'px';
+  glow.style.top = e.clientY + 'px';
+});
+
+/* ============================================================
+   PARTÍCULAS FLUTUANTES
+   ============================================================ */
+const canvas = document.getElementById('particles');
+const ctx = canvas.getContext('2d');
+let W,H,particles=[];
+function resize(){ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; }
+resize(); window.addEventListener('resize', resize);
+for(let i=0;i<50;i++){
+  particles.push({
+    x:Math.random()*W, y:Math.random()*H,
+    r:Math.random()*2+.6,
+    vx:(Math.random()-.5)*.25, vy:(Math.random()-.5)*.25,
+    o:Math.random()*.5+.15
+  });
+}
+function loop(){
+  ctx.clearRect(0,0,W,H);
+  const isLight = document.body.classList.contains('light');
+  particles.forEach(p=>{
+    p.x+=p.vx; p.y+=p.vy;
+    if(p.x<0||p.x>W)p.vx*=-1;
+    if(p.y<0||p.y>H)p.vy*=-1;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle = isLight ? `rgba(217,139,160,${p.o})` : `rgba(244,203,214,${p.o})`;
+    ctx.fill();
+  });
+  requestAnimationFrame(loop);
+}
+loop();
+
+/* ============================================================
+   TEMA — padrão ESCURO, com opção de clarear
+   ============================================================ */
+const themeToggle = document.getElementById('themeToggle');
+themeToggle.addEventListener('click', ()=>{
+  document.body.classList.toggle('light');
+  themeToggle.textContent = document.body.classList.contains('light') ? '🌙' : '☀️';
+});
+
+/* ============================================================
+   PLAYER DE MÚSICA — play/pause, volume (padrão 70%) e disco girando
+   ============================================================ */
+const mpAudio = document.getElementById('mpAudio');
+const mpPlayBtn = document.getElementById('mpPlayBtn');
+const mpIconPlay = document.getElementById('mpIconPlay');
+const mpIconPause = document.getElementById('mpIconPause');
+const mpVolume = document.getElementById('mpVolume');
+
+mpAudio.volume = 0.7;
+
+function setPlayingUI(isPlaying){
+  mpIconPlay.style.display = isPlaying ? 'none' : '';
+  mpIconPause.style.display = isPlaying ? '' : 'none';
+}
+
+mpPlayBtn.addEventListener('click', ()=>{
+  if(mpAudio.paused){ mpAudio.play().catch(()=>{}); }
+  else{ mpAudio.pause(); }
+});
+mpAudio.addEventListener('play', ()=> setPlayingUI(true));
+mpAudio.addEventListener('pause', ()=> setPlayingUI(false));
+
+mpVolume.addEventListener('input', ()=>{
+  mpAudio.volume = mpVolume.value / 100;
+});
+
+/* Tenta tocar automaticamente ao carregar a página.
+   Navegadores modernos bloqueiam áudio com som sem interação do usuário;
+   se o autoplay falhar, a música começa assim que a pessoa clicar/tocar em qualquer lugar. */
+function attemptAutoplay(){
+  const playPromise = mpAudio.play();
+  if(playPromise !== undefined){
+    playPromise.catch(()=>{
+      const startOnInteract = ()=>{
+        mpAudio.play().catch(()=>{});
+        document.removeEventListener('click', startOnInteract);
+        document.removeEventListener('touchstart', startOnInteract);
+        document.removeEventListener('keydown', startOnInteract);
+      };
+      document.addEventListener('click', startOnInteract, {once:true});
+      document.addEventListener('touchstart', startOnInteract, {once:true});
+      document.addEventListener('keydown', startOnInteract, {once:true});
+    });
+  }
+}
+attemptAutoplay();
+
+</script>
+</body>
+</html>
