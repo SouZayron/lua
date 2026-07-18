@@ -250,14 +250,17 @@ nav{
   margin-top:14px;
 }
 .mini-friends{
-  display:flex;flex-wrap:wrap;justify-content:center;gap:11px;
-  margin-top:8px;max-width:640px;
+  display:grid;
+  grid-auto-flow:row;
+  justify-content:center;
+  gap:11px;
+  margin-top:8px;max-width:100%;
 }
 .mini-friend{
-  display:flex;align-items:center;gap:8.8px;
+  display:flex;align-items:center;gap:9.7px;
   background:var(--card);backdrop-filter:blur(var(--blur));
   border:1px solid var(--card-border);border-radius:17.6px;
-  padding:8.8px 15.4px 8.8px 8.8px;
+  padding:8.8px 16.9px 8.8px 9.7px;
   transition:transform .25s ease, box-shadow .25s ease;
   cursor:pointer;
 }
@@ -294,6 +297,7 @@ nav{
   background:var(--card);backdrop-filter:blur(var(--blur));
   border:1px solid var(--card-border);border-radius:30px;
   max-width:fit-content;
+  position:relative;
 }
 .mp-play-btn{
   width:26px;height:26px;border-radius:50%;flex:none;
@@ -411,6 +415,9 @@ footer.mini{
   .profile-header-text .name-xl,
   .profile-header-text .status-chip-top{justify-content:center;}
 }
+@media (max-width:600px){
+  .mini-friends{display:flex;flex-wrap:wrap;}
+}
 </style>
 </head>
 <body class="dark">
@@ -441,7 +448,7 @@ footer.mini{
           </div>
         </div>
         <div class="profile-header-text">
-          <div class="status-chip-top"><span class="dot"></span> Online agora</div>
+          <div class="status-chip-top" id="mainStatusChip"><span class="dot" id="mainStatusDot"></span> <span id="mainStatusText">Online agora</span></div>
           <h1 class="name-xl" id="typedName">LUA</h1>
           <div class="role">I ❤ LUXEMBURGO</div>
         </div>
@@ -511,6 +518,7 @@ const DEFAULT_FRIENDS = [
   {name:"Miguel", letter:"M", status:"online", id:"", photo:"https://xatimg.com/image/VMhnaRRC7MFV.png", heart:true},
   {name:"Freira",   letter:"F", status:"online", id:"", photo:"https://xatimg.com/image/hWRqMSIbynuA.jpg"},
   {name:"Fake",     letter:"F", status:"online", id:"", photo:"https://xatimg.com/image/ObNaabDlySiQ.png"},
+  {name:"Maah",     letter:"M", status:"online", id:"", photo:"https://xatimg.com/image/xksKRWBEs3j1.png"},
   {name:"Fiona",    letter:"F", status:"online", id:"", photo:"https://xatimg.com/image/mPcQduiXvx8m.png"},
   {name:"Zaru",     letter:"Z", status:"online", id:"", photo:"https://xatimg.com/image/M9dhhMXsgh9X.png"},
 ];
@@ -539,6 +547,8 @@ const miniFriendsEl = document.getElementById('miniFriends');
 
 function renderFriends(){
   miniFriendsEl.innerHTML = '';
+  const cols = Math.max(1, Math.ceil(friends.length / 2));
+  miniFriendsEl.style.gridTemplateColumns = `repeat(${cols}, auto)`;
   friends.forEach(f=>{
     const item = document.createElement('div');
     item.className = 'mini-friend';
@@ -560,6 +570,29 @@ function renderFriends(){
   });
 }
 renderFriends();
+
+/* ============================================================
+   STATUS "ONLINE AGORA" — segue o horário de Luxemburgo (Europe/Luxembourg)
+   Online das 8h às 22h, fora desse intervalo aparece Offline.
+   ============================================================ */
+const mainStatusDot = document.getElementById('mainStatusDot');
+const mainStatusText = document.getElementById('mainStatusText');
+
+function updateMainStatus(){
+  const hourStr = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Luxembourg',
+    hour: '2-digit',
+    hour12: false
+  }).format(new Date());
+  const hour = parseInt(hourStr, 10);
+  const isOnline = hour >= 8 && hour < 22;
+
+  mainStatusText.textContent = isOnline ? 'Online agora' : 'Offline';
+  mainStatusDot.style.background = `var(--${isOnline ? 'online' : 'offline'})`;
+  mainStatusDot.style.boxShadow = `0 0 8px var(--${isOnline ? 'online' : 'offline'})`;
+}
+updateMainStatus();
+setInterval(updateMainStatus, 60000);
 
 /* ============================================================
    PAINEL ADMIN — acesse abrindo o site com #admin no final da URL
@@ -742,9 +775,26 @@ mpVolume.addEventListener('input', ()=>{
   mpAudio.volume = mpVolume.value / 100;
 });
 
-/* Tenta tocar automaticamente ao carregar a página.
-   Navegadores modernos bloqueiam áudio com som sem interação do usuário;
-   se o autoplay falhar, a música começa assim que a pessoa clicar/tocar em qualquer lugar. */
+/* ============================================================
+   AUTOPLAY — navegadores só permitem autoplay com som MUDO.
+   Estratégia: toca mudo assim que a página carrega (o player já
+   fica "ligado") e desmuta assim que a pessoa interagir pela
+   primeira vez (clique, toque ou tecla) em qualquer lugar da página.
+   Isso é o mais próximo de automático que os navegadores permitem.
+   ============================================================ */
+mpAudio.muted = true;
+
+function unmuteAudio(){
+  mpAudio.muted = false;
+  mpAudio.volume = mpVolume.value / 100;
+  document.removeEventListener('click', unmuteAudio);
+  document.removeEventListener('touchstart', unmuteAudio);
+  document.removeEventListener('keydown', unmuteAudio);
+}
+document.addEventListener('click', unmuteAudio, {once:true});
+document.addEventListener('touchstart', unmuteAudio, {once:true});
+document.addEventListener('keydown', unmuteAudio, {once:true});
+
 function attemptAutoplay(){
   const playPromise = mpAudio.play();
   if(playPromise !== undefined){
